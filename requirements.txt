@@ -1,4 +1,5 @@
+jupyter
 torch
 numpy
 matplotlib
-jupyter
+graphviz
