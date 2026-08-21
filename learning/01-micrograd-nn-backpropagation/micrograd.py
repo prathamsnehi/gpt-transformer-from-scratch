@@ -3,6 +3,7 @@
 import math
 import numpy as np
 import matplotlib.pyplot as plt
+import random
 
 class Value:
     def __init__(self, data, _children=(), _op='', label=''):
@@ -77,3 +78,50 @@ class Value:
         self.grad = 1.0 # assuming this is the last thing
         for node in reversed(topo):
             node._backward()
+
+class Neuron:
+    def __init__(self, num_inputs: int) -> None:
+        self.weights = []
+        self.bias = Value(random.uniform(-1, 1))
+
+        # initializing weights randomly at first:
+        for i in range(num_inputs):
+            self.weights.append(Value(random.uniform(-1, 1)))
+
+    def __call__(self, x):
+        # imagine you created an object n from Neuron
+        # when you do n(x), this function is called, and x can be any input
+
+        # we need to return the forward pass of this neuron, i.e.
+        # Summation(wixi) + b
+        # Therefore, we expect x to be an array of the same size as num_inputs
+        activation = sum(wi*xi for wi, xi in zip(self.weights, x)) + self.bias
+        return activation.tanh()
+
+class Layer:
+    def __init__(self, num_inputs, num_outputs):
+        self.neurons = []
+        for i in range(num_outputs): # each output is a Neuron in this layer, so:
+            self.neurons.append(Neuron(num_inputs))
+
+    def __call__(self, x):
+        outs = [n(x) for n in self.neurons]
+        if len(outs) == 1:
+            return outs[0]
+        return outs    
+
+class MLP:
+    def __init__(self, num_inputs, num_output_list):
+        """
+        num inputs: number of input neurons
+        num_output_list: a list containing number of neurons in each layer after the input layer
+        """
+        sizes = [num_inputs] + num_output_list # sizes of all the layers in the MLP
+        self.layers = []
+        for i in range(len(sizes) - 1):
+            self.layers.append(Layer(sizes[i], sizes[i+1]))
+
+    def __call__(self, x):
+        for layer in self.layers:
+            x = layer(x)
+        return x
