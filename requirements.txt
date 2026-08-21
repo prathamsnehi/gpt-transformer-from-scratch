@@ -1,4 +1,5 @@
 jupyter
+ipynb
 torch
 numpy
 matplotlib
