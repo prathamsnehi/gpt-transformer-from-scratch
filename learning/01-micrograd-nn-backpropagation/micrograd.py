@@ -52,6 +52,25 @@ class Value:
     def __rmul__(self, other):
         return self * other
 
+    def __neg__(self):
+        return -1 * self
+        
+    def __sub__(self, other):
+        return self + (-other)
+
+    def __rsub__(self, other):
+        return other + (-self)
+
+    def __pow__(self, other):
+        assert isinstance(other, (int, float)), "only supporting int/float powers for now"
+
+        out = Value(self.data ** other, (self,), f'**{other}')
+        def _backward():
+            self.grad += other * ((self.data) ** (other - 1)) * out.grad # (nx^(n-1) * global of out)
+            # since we usually power with consts, their differentiation will be 0
+        out._backward = _backward
+        return out
+
     def tanh(self):
         x = self.data
         t = (math.exp(2*x) - 1)/(math.exp(2*x) + 1)
@@ -95,8 +114,11 @@ class Neuron:
         # we need to return the forward pass of this neuron, i.e.
         # Summation(wixi) + b
         # Therefore, we expect x to be an array of the same size as num_inputs
-        activation = sum(wi*xi for wi, xi in zip(self.weights, x)) + self.bias
+        activation = sum((wi*xi for wi, xi in zip(self.weights, x)), self.bias) # sum starts at self.bias, so it's like wixi + b
         return activation.tanh()
+
+    def parameters(self):
+        return self.weights + [self.bias]
 
 class Layer:
     def __init__(self, num_inputs, num_outputs):
@@ -108,7 +130,14 @@ class Layer:
         outs = [n(x) for n in self.neurons]
         if len(outs) == 1:
             return outs[0]
-        return outs    
+        return outs
+
+    def parameters(self):
+        params = []
+        for neuron in self.neurons:
+            ps = neuron.parameters()
+            params.extend(ps)
+        return params
 
 class MLP:
     def __init__(self, num_inputs, num_output_list):
@@ -125,3 +154,11 @@ class MLP:
         for layer in self.layers:
             x = layer(x)
         return x
+
+    def parameters(self):
+        params = []
+        for layer in self.layers:
+            for neuron in layer.neurons:
+                ps = neuron.parameters()
+                params.extend(ps)
+        return params
